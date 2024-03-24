@@ -13,29 +13,34 @@ import (
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
-var hevcArgs = ffmpeg.KwArgs{
+var CurentConversion = ""
+var ffmpegArgs = ffmpeg.KwArgs{
 	"c:v": "libx265",
 	"vf":  "scale=-1:1080",
 	"crf": "30",
 	"r":   "30",
 }
 
-type progressMsg float64
-
-func Convert() tea.Msg {
-	// ConvertWithProgress("adsfsdf.mp4", "output.mp4")
-	// ConvertWithProgress("test.mp4", "output.mp4")
-	ConvertWithProgress("test2.mp4", "output.mp4")
-	// ConvertWithProgress("test3.mp4", "output.mp4")
-	return progressMsg(0.001)
+type progressMsg struct {
+	percent    float64
+	conversion string
 }
 
-// ConvertWithProgress uses the ffmpeg `-progress` option with a unix-domain socket to report progress
-func ConvertWithProgress(inFileName, outFileName string) {
+func Convert(infile string, outfile string, codec string) {
+	// convertWithProgress("adsfsdf.mp4", "output.mp4")
+	// convertWithProgress("test.mp4", "output.mp4")
+	// convertWithProgress("test2.mp4", "output.mp4")
+	ffmpegArgs["c:v"] = codec
+	CurentConversion = codec
+	convertWithProgress(infile, outfile)
+	// return progres/sMsg(0.001)
+}
+
+// convertWithProgress uses the ffmpeg `-progress` option with a unix-domain socket to report progress
+func convertWithProgress(inFileName, outFileName string) {
 	a, err := ffmpeg.Probe(inFileName)
 	if err != nil {
 		panic(err)
@@ -46,7 +51,7 @@ func ConvertWithProgress(inFileName, outFileName string) {
 	}
 
 	err = ffmpeg.Input(inFileName).
-		Output(outFileName, hevcArgs).
+		Output(outFileName, ffmpegArgs).
 		GlobalArgs("-progress", "unix://"+TempSock(totalDuration)).
 		OverWriteOutput().
 		Silent(true).
@@ -72,7 +77,6 @@ func TempSock(totalDuration float64) string {
 		}
 		buf := make([]byte, 16)
 		data := ""
-		progress := 0.00
 		for {
 			_, err := fd.Read(buf)
 			if err != nil {
@@ -88,12 +92,18 @@ func TempSock(totalDuration float64) string {
 			if strings.Contains(data, "progress=end") {
 				cp = 1.00
 			}
-			if cp != 0.00 && cp != progress {
-				progress = cp
-				Program.Send(progressMsg(progress))
-				if (progress) == 1.00 {
+			// fmt.Println(cp)
+			if cp > 0.00 && cp < 1.01 {
+				Program.Send(progressMsg(progressMsg{
+					percent:    cp,
+					conversion: CurentConversion,
+				}))
+				if cp == 1.00 {
 					time.Sleep(time.Second / 2)
-					Program.Send(progressMsg(1.5))
+					Program.Send(progressMsg(progressMsg{
+						percent:    cp,
+						conversion: CurentConversion,
+					}))
 				}
 			}
 		}

@@ -16,7 +16,6 @@ var Program *tea.Program
 type Model struct {
 	x265progress progress.Model
 	vp9progress  progress.Model
-	progress     progress.Model
 	form         *huh.Form // huh.Form is just a tea.Model
 }
 
@@ -37,7 +36,6 @@ func initialModel() Model {
 	return Model{
 		x265progress: progress.New(progress.WithDefaultGradient()),
 		vp9progress:  progress.New(progress.WithDefaultGradient()),
-		progress:     progress.New(progress.WithDefaultGradient()),
 		form:         form,
 	}
 }
@@ -62,23 +60,44 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case progressMsg:
-		if msg > 1.1 {
+		// quit if conversions are done
+		if m.x265progress.Percent() >= 1.00 && m.vp9progress.Percent() >= 1.00 {
 			return m, tea.Quit
 		}
-		return m, m.progress.SetPercent(float64(msg))
+		// fmt.Println(msg.percent)
+		// start vp9 conversion if x265 is done
+		if m.x265progress.Percent() >= 1.00 && m.vp9progress.Percent() == 0.0 {
+			fmt.Println("starting vp9")
+			go Convert("test2.mp4", "./optimized/output.webm", "vp9")
+			return m, m.vp9progress.SetPercent(0.001)
+		}
+		// Update the progress bar
+		if msg.conversion == "libx265" {
+			return m, m.x265progress.SetPercent(float64(msg.percent))
+		}
+		if msg.conversion == "vp9" {
+			return m, m.vp9progress.SetPercent(float64(msg.percent))
+		}
 
-		// FrameMsg is sent when the progress bar wants to animate itself
+	// FrameMsg is sent when the progress bar wants to animate itself
 	case progress.FrameMsg:
-		progressModel, cmd := m.progress.Update(msg)
-		m.progress = progressModel.(progress.Model)
-		return m, cmd
+		if CurentConversion == "libx265" {
+			progressModel, cmd := m.x265progress.Update(msg)
+			m.x265progress = progressModel.(progress.Model)
+			return m, cmd
+		}
+		if CurentConversion == "vp9" {
+			progressModel, cmd := m.vp9progress.Update(msg)
+			m.vp9progress = progressModel.(progress.Model)
+			return m, cmd
+		}
 	}
 
-	// quit if the form is completed
+	// if the form is completed, start the conversion
 	if m.form.State == huh.StateCompleted {
-		if m.progress.Percent() == 0.0 {
-			go Convert()
-			return m, m.progress.SetPercent(0.001)
+		if m.x265progress.Percent() == 0.0 {
+			go Convert("test2.mp4", "./optimized/output.mp4", "libx265")
+			return m, m.x265progress.SetPercent(0.001)
 		}
 	}
 
@@ -96,18 +115,32 @@ func (m Model) View() string {
 	if m.form.State != huh.StateCompleted {
 		return m.form.View()
 	}
-	if m.progress.Percent() > 0.0 {
-		// return fmt.Sprintf("Progress: %.0f%%", m.vp9progress.Percent()*100)
-		pad := strings.Repeat(" ", padding)
-		return "\n" +
-			pad + m.progress.View() + "\n\n" +
-			pad + helpStyle("Press any key to quit")
+	sb := strings.Builder{}
+	pad := strings.Repeat(" ", padding)
+	if m.x265progress.Percent() > 0.0 {
+		sb.WriteString(pad + helpStyle("Converting to x265\n"))
+		sb.WriteString("\n" +
+			pad + m.x265progress.View() + "\n\n")
+	}
+	if m.vp9progress.Percent() > 0.0 {
+		sb.WriteString(pad + helpStyle("Converting to VP9\n"))
+		sb.WriteString("\n" +
+			pad + m.vp9progress.View() + "\n\n")
+	}
+	if sb.Len() > 0 {
+		sb.WriteString(pad + helpStyle("Press q to quit"))
+		return sb.String()
 	}
 	burger := m.form.GetString("burger")
 	return fmt.Sprintf("You chose %s", burger)
 }
 
 func main() {
+	// make optimized directory if not exists
+	if _, err := os.Stat("./optimized"); os.IsNotExist(err) {
+		os.Mkdir("./optimized", 0755)
+	}
+
 	Program = tea.NewProgram(initialModel())
 	if _, err := Program.Run(); err != nil {
 		fmt.Printf("Alas, there's been an error: %v", err)
