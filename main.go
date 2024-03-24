@@ -19,6 +19,13 @@ type Model struct {
 	form         *huh.Form // huh.Form is just a tea.Model
 }
 
+const (
+	padding  = 2
+	maxWidth = 80
+)
+
+var helpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#626262")).Render
+
 var form = huh.NewForm(
 	huh.NewGroup(
 		huh.NewSelect[string]().
@@ -67,15 +74,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// fmt.Println(msg.percent)
 		// start vp9 conversion if x265 is done
 		if m.x265progress.Percent() >= 1.00 && m.vp9progress.Percent() == 0.0 {
-			fmt.Println("starting vp9")
-			go Convert("test2.mp4", "./optimized/output.webm", "vp9")
+			go Convert("test2.mp4", "./optimized/output2.webm", "libvpx-vp9")
 			return m, m.vp9progress.SetPercent(0.001)
 		}
 		// Update the progress bar
 		if msg.conversion == "libx265" {
 			return m, m.x265progress.SetPercent(float64(msg.percent))
 		}
-		if msg.conversion == "vp9" {
+		if msg.conversion == "libvpx-vp9" {
 			return m, m.vp9progress.SetPercent(float64(msg.percent))
 		}
 
@@ -86,11 +92,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.x265progress = progressModel.(progress.Model)
 			return m, cmd
 		}
-		if CurentConversion == "vp9" {
+		if CurentConversion == "libvpx-vp9" {
 			progressModel, cmd := m.vp9progress.Update(msg)
 			m.vp9progress = progressModel.(progress.Model)
 			return m, cmd
 		}
+
+	case tea.WindowSizeMsg:
+		// Calculate the maximum width of the progress bars
+		bars := []progress.Model{m.x265progress, m.vp9progress}
+		maxWidth := msg.Width - padding*2 - 4
+		for _, bar := range bars {
+			if bar.Width > maxWidth {
+				maxWidth = bar.Width
+			}
+		}
+		return m, nil
 	}
 
 	// if the form is completed, start the conversion
@@ -104,33 +121,34 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-const (
-	padding  = 2
-	maxWidth = 80
-)
-
-var helpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#626262")).Render
-
 func (m Model) View() string {
 	if m.form.State != huh.StateCompleted {
 		return m.form.View()
 	}
-	sb := strings.Builder{}
+	// sb := strings.Builder{}
 	pad := strings.Repeat(" ", padding)
+	result := ""
 	if m.x265progress.Percent() > 0.0 {
-		sb.WriteString(pad + helpStyle("Converting to x265\n"))
-		sb.WriteString("\n" +
-			pad + m.x265progress.View() + "\n\n")
+		result += pad + "Converting to x265"
+		result += "\n" + pad + m.x265progress.View()
+		// sb.WriteString(pad + helpStyle("Converting to x265\n"))
+		// sb.WriteString("\n" +
+		// 	pad + m.x265progress.View() + "\n\n")
+		result += "\n\n" + pad + "Converting to VP9"
+		result += "\n" + pad + m.vp9progress.View()
 	}
-	if m.vp9progress.Percent() > 0.0 {
-		sb.WriteString(pad + helpStyle("Converting to VP9\n"))
-		sb.WriteString("\n" +
-			pad + m.vp9progress.View() + "\n\n")
+	// if m.vp9progress.Percent() > 0.0 {
+	// 	result += "\n\n" + pad + "Converting to VP9"
+	// 	result += "\n" + pad + m.vp9progress.View()
+	// }
+	if result != "" {
+		result += "\n\n" + pad + helpStyle("Press q to quit")
+		return result
 	}
-	if sb.Len() > 0 {
-		sb.WriteString(pad + helpStyle("Press q to quit"))
-		return sb.String()
-	}
+	// if sb.Len() > 0 {
+	// 	sb.WriteString(pad + helpStyle("Press q to quit"))
+	// 	return sb.String()
+	// }
 	burger := m.form.GetString("burger")
 	return fmt.Sprintf("You chose %s", burger)
 }

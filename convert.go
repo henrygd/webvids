@@ -17,12 +17,6 @@ import (
 )
 
 var CurentConversion = ""
-var ffmpegArgs = ffmpeg.KwArgs{
-	"c:v": "libx265",
-	"vf":  "scale=-1:1080",
-	"crf": "30",
-	"r":   "30",
-}
 
 type progressMsg struct {
 	percent    float64
@@ -30,17 +24,31 @@ type progressMsg struct {
 }
 
 func Convert(infile string, outfile string, codec string) {
-	// convertWithProgress("adsfsdf.mp4", "output.mp4")
-	// convertWithProgress("test.mp4", "output.mp4")
-	// convertWithProgress("test2.mp4", "output.mp4")
+	ffmpegArgs := ffmpeg.KwArgs{
+		"vf": "scale=1920:-2",
+		"r":  "30",
+	}
 	ffmpegArgs["c:v"] = codec
+	// x265 specific options
+	if codec == "libx265" {
+		ffmpegArgs["crf"] = "30"
+		// ffmpegArgs["preset"] = "slow"
+		ffmpegArgs["movflags"] = "faststart"
+	}
+	// vp9 specific options
+	if codec == "libvpx-vp9" {
+		ffmpegArgs["crf"] = "36"
+		// ffmpegArgs["deadline"] = "realtime"
+		// ffmpegArgs["cpu-used"] = "8"
+		// ffmpegArgs["threads"] = "8"
+	}
 	CurentConversion = codec
-	convertWithProgress(infile, outfile)
+	convertWithProgress(infile, outfile, ffmpegArgs)
 	// return progres/sMsg(0.001)
 }
 
 // convertWithProgress uses the ffmpeg `-progress` option with a unix-domain socket to report progress
-func convertWithProgress(inFileName, outFileName string) {
+func convertWithProgress(inFileName string, outFileName string, ffmpegArgs ffmpeg.KwArgs) {
 	a, err := ffmpeg.Probe(inFileName)
 	if err != nil {
 		panic(err)
