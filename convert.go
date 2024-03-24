@@ -38,7 +38,7 @@ func Convert(infile string, outfile string, codec string) {
 	// vp9 specific options
 	if codec == "libvpx-vp9" {
 		ffmpegArgs["crf"] = "36"
-		// ffmpegArgs["deadline"] = "realtime"
+		ffmpegArgs["deadline"] = "realtime"
 		// ffmpegArgs["cpu-used"] = "8"
 		// ffmpegArgs["threads"] = "8"
 	}

@@ -27,20 +27,10 @@ const (
 	maxWidth = 80
 )
 
-var helpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#626262")).Render
+var Crf = "30"
+var StripAudio = true
 
-var form = huh.NewForm(
-	huh.NewGroup(
-		huh.NewSelect[string]().
-			Title("Choose your burger").
-			Options(
-				huh.NewOption("Charmburger Classic", "classic"),
-				huh.NewOption("Chickwich", "chickwich"),
-				huh.NewOption("Fishburger", "fishburger"),
-				huh.NewOption("Charmpossible™ Burger", "charmpossible"),
-			),
-	),
-)
+var helpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#626262")).Render
 
 func (m Model) Init() tea.Cmd {
 	return m.filepicker.Init()
@@ -153,11 +143,12 @@ func (m Model) View() string {
 
 	// file has been selected - show the form if not completed
 	if m.form.State != huh.StateCompleted {
-		return m.form.View()
+		return "\n" + m.form.View()
 	}
 
-	// sb := strings.Builder{}
 	pad := strings.Repeat(" ", padding)
+
+	// sb := strings.Builder{}
 	result := ""
 	if m.x265progress.Percent() > 0.0 {
 		result += pad + "Converting to x265"
@@ -193,17 +184,32 @@ func main() {
 	// initialize model
 	fp := filepicker.New()
 	fp.AllowedTypes = []string{".mp4", ".mkv", ".mov", ".avi", ".wmv", ".webm"}
-	// fp.CurrentDirectory, _ = os.UserHomeDir()
 
 	m := Model{
 		x265progress: progress.New(progress.WithDefaultGradient()),
 		vp9progress:  progress.New(progress.WithDefaultGradient()),
-		form:         form,
 		filepicker:   fp,
 		selectedFile: "",
+		// weird thing where you can't press enter on the text immediately
+		form: huh.NewForm(
+			huh.NewGroup(
+				huh.NewInput().
+					Title("Constant rate factor").
+					Description("Higher value means higher quality and file size.").
+					// need to add a validator
+					Placeholder("30").
+					Value(&Crf),
+
+				huh.NewConfirm().
+					Title("Strip audio?").
+					Affirmative("Yes").
+					Negative("No").
+					Value(&StripAudio),
+			),
+		),
 	}
 
-	Program = tea.NewProgram(m, tea.WithAltScreen())
+	Program = tea.NewProgram(m)
 	if _, err := Program.Run(); err != nil {
 		fmt.Printf("Alas, there's been an error: %v", err)
 		os.Exit(1)
