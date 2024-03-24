@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
@@ -23,10 +24,11 @@ type progressMsg struct {
 	conversion string
 }
 
-func Convert(infile string, outfile string, codec string) {
+func Convert(infile string, outfile string, codec string) tea.Cmd {
 	ffmpegArgs := ffmpeg.KwArgs{
-		"vf": "scale=1920:-2",
-		"r":  "30",
+		"vf": "scale=-1:1080",
+		// "r":     "30",
+		// "vsync": "vfr",
 	}
 	ffmpegArgs["c:v"] = codec
 	// x265 specific options
@@ -37,13 +39,16 @@ func Convert(infile string, outfile string, codec string) {
 	}
 	// vp9 specific options
 	if codec == "libvpx-vp9" {
-		ffmpegArgs["crf"] = "36"
-		ffmpegArgs["deadline"] = "realtime"
+		ffmpegArgs["crf"] = "34"
+		// ffmpegArgs["deadline"] = "realtime"
 		// ffmpegArgs["cpu-used"] = "8"
 		// ffmpegArgs["threads"] = "8"
 	}
 	CurentConversion = codec
 	convertWithProgress(infile, outfile, ffmpegArgs)
+	return func() tea.Msg {
+		return progressMsg{percent: 0.001, conversion: CurentConversion}
+	}
 	// return progres/sMsg(0.001)
 }
 
