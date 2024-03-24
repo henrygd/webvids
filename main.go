@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/filepicker"
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
@@ -17,6 +18,8 @@ type Model struct {
 	x265progress progress.Model
 	vp9progress  progress.Model
 	form         *huh.Form // huh.Form is just a tea.Model
+	filepicker   filepicker.Model
+	selectedFile string
 }
 
 const (
@@ -39,39 +42,50 @@ var form = huh.NewForm(
 	),
 )
 
-func initialModel() Model {
-	return Model{
-		x265progress: progress.New(progress.WithDefaultGradient()),
-		vp9progress:  progress.New(progress.WithDefaultGradient()),
-		form:         form,
-	}
-}
-
 func (m Model) Init() tea.Cmd {
-	return m.form.Init()
+	return m.filepicker.Init()
+	// return m.form.Init()
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// Update the form
+	// quit if the user presses q or ctrl+c
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "ctrl+c", "q":
+			return m, tea.Quit
+		}
+	}
+
+	var cmd tea.Cmd
+
+	m.filepicker, cmd = m.filepicker.Update(msg)
+
+	// Did the user select a file?
+	if didSelect, path := m.filepicker.DidSelectFile(msg); didSelect {
+		// Get the path of the selected file.
+		m.selectedFile = path
+		// initialize the form
+		m.form.Init()
+		return m, cmd
+	}
+
+	if m.selectedFile == "" {
+		return m, cmd
+	}
+
+	// // Update the form
 	form, cmd := m.form.Update(msg)
 	if f, ok := form.(*huh.Form); ok {
 		m.form = f
 	}
 
 	switch msg := msg.(type) {
-	// quit if the user presses q or ctrl+c
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c", "q":
-			return m, tea.Quit
-		}
-
 	case progressMsg:
 		// quit if conversions are done
-		if m.x265progress.Percent() >= 1.00 && m.vp9progress.Percent() >= 1.00 {
+		if m.x265progress.Percent() >= 1.0 && m.vp9progress.Percent() >= 1.0 {
 			return m, tea.Quit
 		}
-		// fmt.Println(msg.percent)
 		// start vp9 conversion if x265 is done
 		if m.x265progress.Percent() >= 1.00 && m.vp9progress.Percent() == 0.0 {
 			go Convert("test2.mp4", "./optimized/output2.webm", "libvpx-vp9")
@@ -122,9 +136,26 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
+	// display file picker if no file is selected
+	if m.selectedFile == "" {
+		var s strings.Builder
+		s.WriteString("\n  ")
+		s.WriteString("Pick a file:")
+		// if m.err != nil {
+		// 	s.WriteString(m.filepicker.Styles.DisabledFile.Render(m.err.Error()))
+		// } else if m.selectedFile == "" {
+		// } else {
+		// 	s.WriteString("Selected file: " + m.filepicker.Styles.Selected.Render(m.selectedFile))
+		// }
+		s.WriteString("\n\n" + m.filepicker.View() + "\n")
+		return s.String()
+	}
+
+	// file has been selected - show the form if not completed
 	if m.form.State != huh.StateCompleted {
 		return m.form.View()
 	}
+
 	// sb := strings.Builder{}
 	pad := strings.Repeat(" ", padding)
 	result := ""
@@ -159,7 +190,20 @@ func main() {
 		os.Mkdir("./optimized", 0755)
 	}
 
-	Program = tea.NewProgram(initialModel())
+	// initialize model
+	fp := filepicker.New()
+	fp.AllowedTypes = []string{".mp4", ".mkv", ".mov", ".avi", ".wmv", ".webm"}
+	// fp.CurrentDirectory, _ = os.UserHomeDir()
+
+	m := Model{
+		x265progress: progress.New(progress.WithDefaultGradient()),
+		vp9progress:  progress.New(progress.WithDefaultGradient()),
+		form:         form,
+		filepicker:   fp,
+		selectedFile: "",
+	}
+
+	Program = tea.NewProgram(m, tea.WithAltScreen())
 	if _, err := Program.Run(); err != nil {
 		fmt.Printf("Alas, there's been an error: %v", err)
 		os.Exit(1)
