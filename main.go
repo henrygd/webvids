@@ -37,6 +37,7 @@ var Preview = false
 
 var appStyle = lipgloss.NewStyle().Margin(1, 2, 0, 2)
 var helpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#626262"))
+var headingStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("63"))
 
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(
@@ -157,7 +158,7 @@ func (m Model) View() string {
 	// display file picker if no file is selected
 	if m.selectedFilePath == "" {
 		var s strings.Builder
-		s.WriteString("Choose file:")
+		s.WriteString(headingStyle.Render("Choose file:"))
 		s.WriteString("\n\n" + m.filepicker.View())
 		return appStyle.Render(s.String())
 	}
