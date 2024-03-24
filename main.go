@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -17,11 +18,12 @@ import (
 var Program *tea.Program
 
 type Model struct {
-	x265progress progress.Model
-	vp9progress  progress.Model
-	form         *huh.Form // huh.Form is just a tea.Model
-	filepicker   filepicker.Model
-	selectedFile string
+	x265progress     progress.Model
+	vp9progress      progress.Model
+	form             *huh.Form // huh.Form is just a tea.Model
+	filepicker       filepicker.Model
+	selectedFilePath string
+	selectedFileName string
 }
 
 const (
@@ -30,7 +32,8 @@ const (
 )
 
 var Crf = "30"
-var StripAudio = true
+var StripAudio = false
+var Preview = false
 
 var appStyle = lipgloss.NewStyle().Margin(1, 2, 0, 2)
 var helpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#626262"))
@@ -42,6 +45,8 @@ func (m Model) Init() tea.Cmd {
 	)
 }
 
+var converting = false
+
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// if m.form.State == huh.StateCompleted {
 	// 	fmt.Println("form completed!!!!!!")
@@ -49,8 +54,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// }
 
 	// if the form is completed, start the conversion
-	if m.form.State == huh.StateCompleted && m.x265progress.Percent() == 0.0 {
-		go Convert(m.selectedFile, "./optimized/output.mp4", "libx265")
+	if m.form.State == huh.StateCompleted && !converting {
+		converting = true
+		go Convert(m.selectedFilePath, fmt.Sprintf("./optimized/%s.mp4", m.selectedFileName), "libx265")
 		return m, m.x265progress.SetPercent(0.001)
 	}
 
@@ -69,7 +75,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// Update the form
-	if m.selectedFile != "" && m.form.State != huh.StateCompleted {
+	if m.selectedFilePath != "" && m.form.State != huh.StateCompleted {
 		form, cmd := m.form.Update(msg)
 		if f, ok := form.(*huh.Form); ok {
 			m.form = f
@@ -86,12 +92,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var cmd tea.Cmd
 
-	if m.selectedFile == "" {
+	if m.selectedFilePath == "" {
 		m.filepicker, cmd = m.filepicker.Update(msg)
 		// Did the user select a file?
 		if didSelect, path := m.filepicker.DidSelectFile(msg); didSelect {
 			// Get the path of the selected file.
-			m.selectedFile = path
+			m.selectedFilePath = path
+			// get the file name without extension
+			m.selectedFileName = strings.TrimSuffix(filepath.Base(m.selectedFilePath), filepath.Ext(m.selectedFilePath))
 			// return m, cmd
 		}
 
@@ -106,7 +114,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		// start vp9 conversion if x265 is done
 		if m.x265progress.Percent() >= 1.00 && m.vp9progress.Percent() == 0.0 {
-			go Convert(m.selectedFile, "./optimized/output2.webm", "libvpx-vp9")
+			go Convert(m.selectedFilePath, fmt.Sprintf("./optimized/%s.webm", m.selectedFileName), "libvpx-vp9")
 			return m, m.vp9progress.SetPercent(0.001)
 		}
 		// Update the progress bar
@@ -147,19 +155,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) View() string {
 	// display file picker if no file is selected
-	if m.selectedFile == "" {
+	if m.selectedFilePath == "" {
 		var s strings.Builder
 		s.WriteString("Choose file:")
 		s.WriteString("\n\n" + m.filepicker.View())
 		return appStyle.Render(s.String())
 	}
 
-	result := ""
 	// file has been selected - show the form if not completed
 	if m.form.State != huh.StateCompleted {
-		result += m.form.View()
+		return appStyle.Render(m.form.View())
 	}
 
+	result := ""
 	if m.x265progress.Percent() > 0.0 {
 		result += "Converting to x265"
 		result += "\n" + m.x265progress.View()
@@ -184,16 +192,16 @@ func main() {
 	fp.AllowedTypes = []string{".mp4", ".mkv", ".mov", ".avi", ".wmv", ".webm"}
 
 	m := Model{
-		x265progress: progress.New(progress.WithDefaultGradient()),
-		vp9progress:  progress.New(progress.WithDefaultGradient()),
-		filepicker:   fp,
-		selectedFile: "",
+		x265progress:     progress.New(progress.WithDefaultGradient()),
+		vp9progress:      progress.New(progress.WithDefaultGradient()),
+		filepicker:       fp,
+		selectedFilePath: "",
 		// weird thing where you can't press enter on the text immediately
 		form: huh.NewForm(
 			huh.NewGroup(
 				huh.NewInput().
 					Title("Constant rate factor").
-					Description("Higher value means higher quality and file size.").
+					Description("Lowering value will increase quality and file size.").
 					Placeholder("30").
 					Value(&Crf).
 					Validate(func(str string) error {
@@ -208,9 +216,17 @@ func main() {
 
 				huh.NewConfirm().
 					Title("Strip audio?").
+					Description("Choose yes if using video as muted background").
 					Affirmative("Yes").
 					Negative("No").
 					Value(&StripAudio),
+
+				huh.NewConfirm().
+					Title("Preview?").
+					Description("Converts only first three seconds of video").
+					Affirmative("Yes").
+					Negative("No").
+					Value(&Preview),
 			),
 		),
 	}

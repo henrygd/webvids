@@ -31,15 +31,29 @@ func Convert(infile string, outfile string, codec string) tea.Cmd {
 		// "vsync": "vfr",
 	}
 	ffmpegArgs["c:v"] = codec
+	if StripAudio {
+		ffmpegArgs["an"] = ""
+	}
+	if Preview {
+		ffmpegArgs["ss"] = "00:00:00"
+		ffmpegArgs["t"] = "00:00:03"
+	}
 	// x265 specific options
 	if codec == "libx265" {
-		ffmpegArgs["crf"] = "30"
-		// ffmpegArgs["preset"] = "slow"
+		ffmpegArgs["crf"] = Crf
 		ffmpegArgs["movflags"] = "faststart"
+		ffmpegArgs["preset"] = "slow"
 	}
 	// vp9 specific options
 	if codec == "libvpx-vp9" {
-		ffmpegArgs["crf"] = "34"
+		// add 6 to base crf
+		crf, err := strconv.Atoi(Crf)
+		if err != nil {
+			fmt.Println("Failed to convert string to integer:", err)
+			os.Exit(1)
+		}
+		crf += 6
+		ffmpegArgs["crf"] = strconv.Itoa(crf)
 		// ffmpegArgs["deadline"] = "realtime"
 		// ffmpegArgs["cpu-used"] = "8"
 		// ffmpegArgs["threads"] = "8"
