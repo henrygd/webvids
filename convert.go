@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
@@ -24,11 +23,9 @@ type progressMsg struct {
 	conversion string
 }
 
-func Convert(infile string, outfile string, codec string) tea.Cmd {
+func Convert(infile string, outfile string, codec string) {
 	ffmpegArgs := ffmpeg.KwArgs{
 		"vf": "scale=-1:1080",
-		// "r":     "30",
-		// "vsync": "vfr",
 	}
 	ffmpegArgs["c:v"] = codec
 	if StripAudio {
@@ -54,16 +51,9 @@ func Convert(infile string, outfile string, codec string) tea.Cmd {
 		}
 		crf += 6
 		ffmpegArgs["crf"] = strconv.Itoa(crf)
-		// ffmpegArgs["deadline"] = "realtime"
-		// ffmpegArgs["cpu-used"] = "8"
-		// ffmpegArgs["threads"] = "8"
 	}
 	CurentConversion = codec
 	convertWithProgress(infile, outfile, ffmpegArgs)
-	return func() tea.Msg {
-		return progressMsg{percent: 0.001, conversion: CurentConversion}
-	}
-	// return progres/sMsg(0.001)
 }
 
 // convertWithProgress uses the ffmpeg `-progress` option with a unix-domain socket to report progress
@@ -77,12 +67,14 @@ func convertWithProgress(inFileName string, outFileName string, ffmpegArgs ffmpe
 		panic(err)
 	}
 
-	err = ffmpeg.Input(inFileName).
+	Cmd = ffmpeg.Input(inFileName).
 		Output(outFileName, ffmpegArgs).
 		GlobalArgs("-progress", "unix://"+TempSock(totalDuration)).
 		OverWriteOutput().
 		Silent(true).
-		Run()
+		Compile()
+
+	err = Cmd.Run()
 	if err != nil {
 		panic(err)
 	}
@@ -119,7 +111,6 @@ func TempSock(totalDuration float64) string {
 			if strings.Contains(data, "progress=end") {
 				cp = 1.00
 			}
-			// fmt.Println(cp)
 			if cp > 0.00 && cp < 1.01 {
 				Program.Send(progressMsg(progressMsg{
 					percent:    cp,

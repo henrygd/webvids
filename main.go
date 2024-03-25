@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -14,8 +15,6 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 )
-
-var Program *tea.Program
 
 type Model struct {
 	x265progress     progress.Model
@@ -31,6 +30,8 @@ const (
 	maxWidth = 80
 )
 
+var Program *tea.Program
+var Cmd *exec.Cmd
 var Crf = "30"
 var StripAudio = false
 var Preview = false
@@ -49,11 +50,6 @@ func (m Model) Init() tea.Cmd {
 var converting = false
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// if m.form.State == huh.StateCompleted {
-	// 	fmt.Println("form completed!!!!!!")
-	// 	// return m, tea.Quit
-	// }
-
 	// if the form is completed, start the conversion
 	if m.form.State == huh.StateCompleted && !converting {
 		converting = true
@@ -66,12 +62,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
-			return m, tea.Quit
-			// return m, tea.Batch(
-			// 	tea.ClearScreen,
-			// 	tea.Println("Quitting..."),
-			// 	tea.Quit,
-			// )
+			return m, tea.Sequence(
+				func() tea.Msg {
+					if Cmd != nil && Cmd.Process != nil {
+						Cmd.Process.Kill()
+					}
+					return nil
+				},
+				tea.Quit,
+			)
 		}
 	}
 

@@ -21,6 +21,5 @@ To use in HTML:
 
 ## Todo
 
-- terminate conversion goroutine on quit
 - goreleaser
 - update option
