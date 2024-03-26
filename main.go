@@ -16,6 +16,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+const VERSION = "0.0.1"
+
 type Model struct {
 	x265progress     progress.Model
 	vp9progress      progress.Model
@@ -182,6 +184,14 @@ func (m Model) View() string {
 }
 
 func main() {
+	if len(os.Args) > 1 {
+		arg := os.Args[1]
+		if arg == "--update" {
+			Update()
+			os.Exit(0)
+		}
+	}
+
 	// make optimized directory if not exists
 	if _, err := os.Stat("./optimized"); os.IsNotExist(err) {
 		os.Mkdir("./optimized", 0755)

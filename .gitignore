@@ -3,4 +3,6 @@
 *.mkv
 debug.log
 main
+webvids
 dist/
+.idea
