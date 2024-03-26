@@ -13,10 +13,9 @@ func Update() {
 	var latest *selfupdate.Release
 	var found bool
 	var err error
-	selfupdate.EnableLog()
 	currentVersion := semver.MustParse(VERSION)
-	log.Infof("current version is %s", currentVersion)
-	log.Info("Checking for update...")
+	log.Info("Checking for updates...")
+	log.Infof("Current version is %s", currentVersion)
 	latest, found, err = selfupdate.DetectLatest("henrygd/webvids")
 
 	if err != nil {
@@ -24,18 +23,16 @@ func Update() {
 	}
 
 	if !found {
-		log.Info("found", found)
-		log.Info("latest", latest)
-		log.Error("No releases found")
+		log.Error("Could not find any releases")
 		os.Exit(1)
 	}
 
+	log.Infof("Latest version is %s", latest.Version)
+
 	if latest.Version.LTE(currentVersion) {
-		log.Infof("Already up to date: %s", latest.Version)
+		log.Info("You are up to date")
 		return
 	}
-
-	log.Infof("Found new version: %s", latest.Version)
 
 	var binaryPath string
 	log.Infof("Updating from %s to %s...", VERSION, latest.Version)
