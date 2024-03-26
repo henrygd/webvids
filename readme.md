@@ -1,16 +1,16 @@
-# Work in progress
+# webvids
 
-Terminal app to create optimized videos for use on the web.
+Terminal app to create optimized videos for the web.
 
 ![TUI example gif](assets/example.gif)
 
-## Use
+## Usage
 
 Choose an input file and set your options.
 
 A folder named `optimized` will be created in the working directory containing the optimized videos.
 
-To use in HTML:
+Use both videos in HTML with `source` tags:
 
 ```html
 <video>
@@ -21,5 +21,5 @@ To use in HTML:
 
 ## Todo
 
-- goreleaser
 - update option
+- pass file directly as argument
