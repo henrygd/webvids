@@ -16,7 +16,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-const VERSION = "0.0.1"
+const VERSION = "0.0.2"
 
 type Model struct {
 	x265progress     progress.Model
