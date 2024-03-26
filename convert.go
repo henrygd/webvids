@@ -24,6 +24,11 @@ type progressMsg struct {
 }
 
 func Convert(infile string, outfile string, codec string) {
+	// create optimized directory if it doesn't exist
+	if _, err := os.Stat("./optimized"); os.IsNotExist(err) {
+		os.Mkdir("./optimized", 0755)
+	}
+
 	ffmpegArgs := ffmpeg.KwArgs{
 		"vf": "scale=-1:1080",
 	}

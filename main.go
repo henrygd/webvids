@@ -184,17 +184,13 @@ func (m Model) View() string {
 }
 
 func main() {
+	// handle update
 	if len(os.Args) > 1 {
 		arg := os.Args[1]
 		if arg == "--update" {
 			Update()
 			os.Exit(0)
 		}
-	}
-
-	// make optimized directory if not exists
-	if _, err := os.Stat("./optimized"); os.IsNotExist(err) {
-		os.Mkdir("./optimized", 0755)
 	}
 
 	// initialize model
