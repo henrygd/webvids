@@ -3,3 +3,4 @@
 *.mkv
 debug.log
 main
+dist/
