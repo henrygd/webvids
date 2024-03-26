@@ -46,5 +46,5 @@ func Update() {
 		log.Error("Please try running the command using sudo", "err", err)
 		os.Exit(1)
 	}
-	log.Infof("Successfully updated: %s -> %s\n\nRelease note:\n%s", VERSION, latest.Version, strings.TrimSpace(latest.ReleaseNotes))
+	log.Infof("Successfully updated: %s -> %s\n\n%s", VERSION, latest.Version, strings.TrimSpace(latest.ReleaseNotes))
 }
