@@ -1,7 +1,7 @@
 Set Shell zsh
 Set Theme "Dracula"
 Set TypingSpeed 80ms
-Type "./main"
+Type "webvids"
 Sleep 100ms
 Enter
 Sleep 1s
