@@ -1,4 +1,4 @@
-module main
+module webvids
 
 go 1.22.0
 
