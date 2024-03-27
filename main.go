@@ -17,7 +17,7 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-const VERSION = "0.0.3"
+const VERSION = "0.1.0"
 
 type Model struct {
 	x265progress     progress.Model
