@@ -14,6 +14,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/log"
 )
 
 const VERSION = "0.0.3"
@@ -101,7 +102,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Get the path of the selected file.
 			m.selectedFilePath = path
 			// get the file name without extension
-			m.selectedFileName = strings.TrimSuffix(filepath.Base(m.selectedFilePath), filepath.Ext(m.selectedFilePath))
+			m.selectedFileName = getFileNameFromPath(m.selectedFilePath)
 			// return m, cmd
 		}
 
@@ -184,25 +185,50 @@ func (m Model) View() string {
 }
 
 func main() {
-	// handle update
+	allowedTypes := []string{".mp4", ".mkv", ".mov", ".avi", ".wmv", ".webm"}
+	selectedFilePath := ""
+	selectedFileName := ""
+
+	// handle arguments (update or file path)
 	if len(os.Args) > 1 {
 		arg := os.Args[1]
-		if arg == "--update" {
+		if arg == "--update" || arg == "-u" || arg == "update" {
 			Update()
 			os.Exit(0)
 		}
+		// if user passed in file path
+		_, err := os.Stat(arg)
+		CheckError(err)
+		// check if the file is an allowed type
+		for _, allowedType := range allowedTypes {
+			if strings.HasSuffix(arg, allowedType) {
+				selectedFilePath = arg
+				selectedFileName = getFileNameFromPath(selectedFilePath)
+				break
+			}
+		}
+
+		// if file is not an allowed type, exit
+		if selectedFilePath == "" {
+			log.Errorf("File not allowed. Allowed types: %s", strings.Join(allowedTypes, ", "))
+			os.Exit(1)
+		}
+	}
+
+	// create file picker if no file is passed in
+	var fp filepicker.Model
+	if selectedFilePath == "" {
+		fp = filepicker.New()
+		fp.AllowedTypes = allowedTypes
 	}
 
 	// initialize model
-	fp := filepicker.New()
-	fp.AllowedTypes = []string{".mp4", ".mkv", ".mov", ".avi", ".wmv", ".webm"}
-
 	m := Model{
 		x265progress:     progress.New(progress.WithDefaultGradient()),
 		vp9progress:      progress.New(progress.WithDefaultGradient()),
 		filepicker:       fp,
-		selectedFilePath: "",
-		// weird thing where you can't press enter on the text immediately
+		selectedFilePath: selectedFilePath,
+		selectedFileName: selectedFileName,
 		form: huh.NewForm(
 			huh.NewGroup(
 				huh.NewInput().
@@ -240,6 +266,17 @@ func main() {
 	Program = tea.NewProgram(m)
 	if _, err := Program.Run(); err != nil {
 		fmt.Printf("Alas, there's been an error: %v", err)
+		os.Exit(1)
+	}
+}
+
+func getFileNameFromPath(path string) string {
+	return strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+}
+
+func CheckError(err error) {
+	if err != nil {
+		log.Error(err.Error())
 		os.Exit(1)
 	}
 }

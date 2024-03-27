@@ -34,7 +34,7 @@ sudo mv webvids /usr/bin/
 
 ## Usage
 
-Run the `webvids` command.
+Run the `webvids` command. You can specify an input file as an argument, or use the built in file picker.
 
 A folder named `optimized` will be created in the working directory containing the optimized videos.
 
@@ -55,4 +55,4 @@ webvids --update
 
 ## Todo
 
-- option to pass file directly as argument
+- check that ffmpeg / required codecs are installed
