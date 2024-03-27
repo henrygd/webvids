@@ -69,12 +69,13 @@ func Convert(infile string, outfile string, codec string) {
 // convertWithProgress uses the ffmpeg `-progress` option with a unix-domain socket to report progress
 func convertWithProgress(inFileName string, outFileName string, ffmpegArgs ffmpeg.KwArgs) {
 	a, err := ffmpeg.Probe(inFileName)
-	if err != nil {
-		panic(err)
-	}
-	totalDuration, err := probeDuration(a)
-	if err != nil {
-		panic(err)
+	CheckError(err)
+
+	// get duration of video (3 seconds if preview mode)
+	totalDuration := 3.00
+	if !Preview {
+		totalDuration, err = probeDuration(a)
+		CheckError(err)
 	}
 
 	Cmd = ffmpeg.Input(inFileName).
