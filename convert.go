@@ -72,27 +72,34 @@ func Convert(infile string, outfile string, codec string) {
 		ffmpegArgs["vf"] = "scale=1080:-2"
 	}
 
-	if StripAudio {
-		ffmpegArgs["an"] = ""
-	}
 	if Preview {
 		ffmpegArgs["ss"] = "00:00:00"
 		ffmpegArgs["t"] = "00:00:03"
 	}
 
+	if StripAudio {
+		ffmpegArgs["an"] = ""
+	}
+	// else {
+	// set audio options
+	// ffmpegArgs["c:a"] = "libopus"
+	// ffmpegArgs["b:a"] = "128k"
+	// ffmpegArgs["ac"] = "2"
+	// }
+
 	// x265 specific options
 	if codec == "libx265" {
 		ffmpegArgs["crf"] = Crf
 		ffmpegArgs["movflags"] = "faststart"
-		ffmpegArgs["preset"] = "slow"
 		ffmpegArgs["tag:v"] = "hvc1"
+		// ffmpegArgs["preset"] = "slow"
 		// ffmpegArgs["profile:v"] = "main"
 		// ffmpegArgs["pix_fmt"] = "yuv420p"
 
 	}
 	// av1 specific options
 	if codec == "libsvtav1" {
-		ffmpegArgs["preset"] = "6"
+		ffmpegArgs["preset"] = "7"
 		// add 7 to base crf (28 -> 35)
 		crf, err := strconv.Atoi(Crf)
 		if err != nil {
