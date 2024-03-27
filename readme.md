@@ -56,3 +56,5 @@ webvids --update
 ## Todo
 
 - check that ffmpeg / required codecs are installed
+- allow selection of preset for faster / slower encoding
+- accurate progress for preview mode

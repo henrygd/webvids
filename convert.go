@@ -45,16 +45,21 @@ func Convert(infile string, outfile string, codec string) {
 		ffmpegArgs["crf"] = Crf
 		ffmpegArgs["movflags"] = "faststart"
 		ffmpegArgs["preset"] = "slow"
+		ffmpegArgs["tag:v"] = "hvc1"
+		// ffmpegArgs["profile:v"] = "main"
+		// ffmpegArgs["pix_fmt"] = "yuv420p"
+
 	}
-	// vp9 specific options
-	if codec == "libvpx-vp9" {
-		// add 6 to base crf
+	// av1 specific options
+	if codec == "libsvtav1" {
+		ffmpegArgs["preset"] = "6"
+		// add 7 to base crf (28 -> 35)
 		crf, err := strconv.Atoi(Crf)
 		if err != nil {
 			fmt.Println("Failed to convert string to integer:", err)
 			os.Exit(1)
 		}
-		crf += 6
+		crf += 7
 		ffmpegArgs["crf"] = strconv.Itoa(crf)
 	}
 	CurentConversion = codec

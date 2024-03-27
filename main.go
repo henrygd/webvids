@@ -21,7 +21,7 @@ const VERSION = "0.0.3"
 
 type Model struct {
 	x265progress     progress.Model
-	vp9progress      progress.Model
+	av1progress      progress.Model
 	form             *huh.Form // huh.Form is just a tea.Model
 	filepicker       filepicker.Model
 	selectedFilePath string
@@ -35,7 +35,7 @@ const (
 
 var Program *tea.Program
 var Cmd *exec.Cmd
-var Crf = "30"
+var Crf = "28"
 var StripAudio = false
 var Preview = false
 
@@ -112,20 +112,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case progressMsg:
 		// quit if conversions are done
-		if m.x265progress.Percent() >= 1.0 && m.vp9progress.Percent() >= 1.0 {
+		if m.x265progress.Percent() >= 1.0 && m.av1progress.Percent() >= 1.0 {
 			return m, tea.Quit
 		}
-		// start vp9 conversion if x265 is done
-		if m.x265progress.Percent() >= 1.00 && m.vp9progress.Percent() == 0.0 {
-			go Convert(m.selectedFilePath, fmt.Sprintf("./optimized/%s.webm", m.selectedFileName), "libvpx-vp9")
-			return m, m.vp9progress.SetPercent(0.001)
+		// start av1 conversion if x265 is done
+		if m.x265progress.Percent() >= 1.00 && m.av1progress.Percent() == 0.0 {
+			go Convert(m.selectedFilePath, fmt.Sprintf("./optimized/%s.webm", m.selectedFileName), "libsvtav1")
+			return m, m.av1progress.SetPercent(0.001)
 		}
 		// Update the progress bar
 		if msg.conversion == "libx265" {
 			return m, m.x265progress.SetPercent(float64(msg.percent))
 		}
-		if msg.conversion == "libvpx-vp9" {
-			return m, m.vp9progress.SetPercent(float64(msg.percent))
+		if msg.conversion == "libsvtav1" {
+			return m, m.av1progress.SetPercent(float64(msg.percent))
 		}
 
 	// FrameMsg is sent when the progress bar wants to animate itself
@@ -135,15 +135,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.x265progress = progressModel.(progress.Model)
 			return m, cmd
 		}
-		if CurentConversion == "libvpx-vp9" {
-			progressModel, cmd := m.vp9progress.Update(msg)
-			m.vp9progress = progressModel.(progress.Model)
+		if CurentConversion == "libsvtav1" {
+			progressModel, cmd := m.av1progress.Update(msg)
+			m.av1progress = progressModel.(progress.Model)
 			return m, cmd
 		}
 
 	case tea.WindowSizeMsg:
 		// Calculate the maximum width of the progress bars
-		bars := []progress.Model{m.x265progress, m.vp9progress}
+		bars := []progress.Model{m.x265progress, m.av1progress}
 		maxWidth := msg.Width - padding*2 - 4
 		for _, bar := range bars {
 			if bar.Width > maxWidth {
@@ -174,8 +174,8 @@ func (m Model) View() string {
 	if m.x265progress.Percent() > 0.0 {
 		result += "Converting to x265"
 		result += "\n" + m.x265progress.View()
-		result += "\n\n" + "Converting to VP9"
-		result += "\n" + m.vp9progress.View()
+		result += "\n\n" + "Converting to AV1"
+		result += "\n" + m.av1progress.View()
 	}
 	if result != "" {
 		result += "\n\n" + helpStyle.Render("Press q to quit")
@@ -225,7 +225,7 @@ func main() {
 	// initialize model
 	m := Model{
 		x265progress:     progress.New(progress.WithDefaultGradient()),
-		vp9progress:      progress.New(progress.WithDefaultGradient()),
+		av1progress:      progress.New(progress.WithDefaultGradient()),
 		filepicker:       fp,
 		selectedFilePath: selectedFilePath,
 		selectedFileName: selectedFileName,
@@ -234,7 +234,7 @@ func main() {
 				huh.NewInput().
 					Title("Constant rate factor").
 					Description("Lowering value will increase quality and file size.").
-					Placeholder("30").
+					Placeholder(Crf).
 					Value(&Crf).
 					Validate(func(str string) error {
 						// Convert string to int
