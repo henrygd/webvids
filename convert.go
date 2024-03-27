@@ -17,10 +17,23 @@ import (
 )
 
 var CurentConversion = ""
+var inputProbeData = probeData{}
+var inputHeight = 0
+var inputWidth = 0
 
 type progressMsg struct {
 	percent    float64
 	conversion string
+}
+
+type probeData struct {
+	Streams []struct {
+		Width  int `json:"width"`
+		Height int `json:"height"`
+	} `json:"streams"`
+	Format struct {
+		Duration string `json:"duration"`
+	} `json:"format"`
 }
 
 func Convert(infile string, outfile string, codec string) {
@@ -29,10 +42,36 @@ func Convert(infile string, outfile string, codec string) {
 		os.Mkdir("./optimized", 0755)
 	}
 
-	ffmpegArgs := ffmpeg.KwArgs{
-		"vf": "scale=-1:1080",
+	// probe input file
+	if len(inputProbeData.Streams) == 0 {
+		a, err := ffmpeg.Probe(infile)
+		CheckError(err)
+		err = json.Unmarshal([]byte(a), &inputProbeData)
+		CheckError(err)
 	}
+
+	// find width / height of video stream
+	if inputWidth == 0 {
+		for _, stream := range inputProbeData.Streams {
+			if stream.Width != 0 && stream.Height != 0 {
+				inputWidth = stream.Width
+				inputHeight = stream.Height
+				break
+			}
+		}
+	}
+
+	// create ffmpeg args
+	ffmpegArgs := ffmpeg.KwArgs{}
 	ffmpegArgs["c:v"] = codec
+
+	// set resolution
+	if inputWidth > inputHeight && inputHeight > 1080 {
+		ffmpegArgs["vf"] = "scale=-2:1080"
+	} else if inputHeight >= inputWidth && inputWidth > 1080 {
+		ffmpegArgs["vf"] = "scale=1080:-2"
+	}
+
 	if StripAudio {
 		ffmpegArgs["an"] = ""
 	}
@@ -40,6 +79,7 @@ func Convert(infile string, outfile string, codec string) {
 		ffmpegArgs["ss"] = "00:00:00"
 		ffmpegArgs["t"] = "00:00:03"
 	}
+
 	// x265 specific options
 	if codec == "libx265" {
 		ffmpegArgs["crf"] = Crf
@@ -68,13 +108,12 @@ func Convert(infile string, outfile string, codec string) {
 
 // convertWithProgress uses the ffmpeg `-progress` option with a unix-domain socket to report progress
 func convertWithProgress(inFileName string, outFileName string, ffmpegArgs ffmpeg.KwArgs) {
-	a, err := ffmpeg.Probe(inFileName)
-	CheckError(err)
+	var err error
 
 	// get duration of video (3 seconds if preview mode)
 	totalDuration := 3.00
 	if !Preview {
-		totalDuration, err = probeDuration(a)
+		totalDuration, err = probeDuration(inputProbeData)
 		CheckError(err)
 	}
 
@@ -141,21 +180,8 @@ func TempSock(totalDuration float64) string {
 	return sockFileName
 }
 
-type probeFormat struct {
-	Duration string `json:"duration"`
-}
-
-type probeData struct {
-	Format probeFormat `json:"format"`
-}
-
-func probeDuration(a string) (float64, error) {
-	pd := probeData{}
-	err := json.Unmarshal([]byte(a), &pd)
-	if err != nil {
-		return 0, err
-	}
-	f, err := strconv.ParseFloat(pd.Format.Duration, 64)
+func probeDuration(data probeData) (float64, error) {
+	f, err := strconv.ParseFloat(data.Format.Duration, 64)
 	if err != nil {
 		return 0, err
 	}
