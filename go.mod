@@ -10,6 +10,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.10.0
 	github.com/charmbracelet/log v0.4.0
 	github.com/rhysd/go-github-selfupdate v1.2.3
+	github.com/spf13/pflag v1.0.5
 	github.com/u2takey/ffmpeg-go v0.5.0
 )
 

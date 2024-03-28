@@ -15,6 +15,7 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
+	flag "github.com/spf13/pflag"
 )
 
 const VERSION = "0.1.1"
@@ -189,20 +190,38 @@ func main() {
 	selectedFilePath := ""
 	selectedFileName := ""
 
-	// handle arguments (update or file path)
-	if len(os.Args) > 1 {
-		arg := os.Args[1]
-		if arg == "--update" || arg == "-u" || arg == "update" {
-			Update()
-			os.Exit(0)
-		}
-		// if user passed in file path
-		_, err := os.Stat(arg)
+	// handle flags
+	versionFlag := flag.BoolP("version", "v", false, "Print version and exit")
+	updateFlag := flag.BoolP("update", "u", false, "Update to the latest version")
+
+	// Override default Usage function to suppress the "pflag: help requested" message
+	flag.Usage = func() {
+		fmt.Fprint(os.Stderr, "Usage: webvids [FILE]\n\nOptions:\n")
+		flag.PrintDefaults()
+		os.Exit(0)
+	}
+
+	flag.Parse()
+
+	if *versionFlag {
+		fmt.Println(VERSION)
+		os.Exit(0)
+	}
+	if *updateFlag {
+		Update()
+		os.Exit(0)
+	}
+
+	// if user passed in file path
+	tail := flag.Args()
+	if len(tail) > 0 {
+		_, err := os.Stat(tail[0])
 		CheckError(err)
+
 		// check if the file is an allowed type
 		for _, allowedType := range allowedTypes {
-			if strings.HasSuffix(arg, allowedType) {
-				selectedFilePath = arg
+			if strings.HasSuffix(tail[0], allowedType) {
+				selectedFilePath = tail[0]
 				selectedFileName = getFileNameFromPath(selectedFilePath)
 				break
 			}
