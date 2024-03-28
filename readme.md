@@ -6,14 +6,14 @@ Terminal app to create optimized videos for the web.
 
 ## Installation
 
-You must have `ffmpeg` installed on your system.
+Please install / update `ffmpeg` first. This program requires it.
 
-If you get an error downloading the archive URL, find the right URL for your architecture on the [releases page](https://github.com/henrygd/webvids/releases).
+Run the command below or download the correct binary for your system on the [releases page](https://github.com/henrygd/webvids/releases).
 
 ### One liner
 
 ```bash
-sudo sh -c 'curl -L "https://github.com/henrygd/webvids/releases/latest/download/webvids_$(uname -s)_$(uname -m | sed 's/x86_64/amd64/' | sed 's/i386/386/' | sed 's/aarch64/arm64/').tar.gz" | tar -xz -O webvids | tee /usr/bin/webvids >/dev/null && chmod +x /usr/bin/webvids'
+sudo sh -c 'curl -sL "https://github.com/henrygd/webvids/releases/latest/download/webvids_$(uname -s)_$(uname -m | sed 's/x86_64/amd64/' | sed 's/i386/386/' | sed 's/aarch64/arm64/').tar.gz" | tar -xz -O webvids | tee /usr/bin/webvids >/dev/null && chmod +x /usr/bin/webvids'
 ```
 
 ### Manual
@@ -34,26 +34,35 @@ sudo mv webvids /usr/bin/
 
 ## Usage
 
-Run the `webvids` command. You can specify an input file as an argument, or use the built in file picker.
+Run the `webvids` command. You may specify an input file or use the built-in file picker.
 
-A folder named `optimized` will be created in the working directory containing the optimized videos.
+```bash
+webvids ./input.mp4
+```
+
+The video(s) will be written to a folder named `optimized` in the current directory.
 
 Use both videos in HTML with `source` tags:
 
 ```html
-<video>
+<video controls>
 	<source type="video/mp4" src="output.mp4" />
 	<source type="video/webm" src="output.webm" />
 </video>
 ```
 
-## Updating
+## Options
 
-```bash
-webvids --update
-```
+| Flag            | Description                  |
+| --------------- | ---------------------------- |
+| `-h, --help`    | Show help                    |
+| `-v, --version` | Print version and exit       |
+| `-u, --update`  | Update to the latest version |
+| `--skip-x265`   | Skip x265 conversion         |
+| `--skip-av1`    | Skip AV1 conversion          |
 
 ## Todo
 
-- check that ffmpeg / required codecs are installed
+- check that libsvtav1 codec is available
 - allow selection of preset for faster / slower encoding
+- allow multiple files to be passed in
