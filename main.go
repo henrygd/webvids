@@ -27,43 +27,57 @@ type Model struct {
 	filepicker       filepicker.Model
 	selectedFilePath string
 	selectedFileName string
+	done             []string
 }
-
-const (
-	padding  = 2
-	maxWidth = 80
-)
 
 var Program *tea.Program
 var Cmd *exec.Cmd
 var Crf = "28"
 var StripAudio = false
 var Preview = false
+var skipX265 bool
+var skipAV1 bool
+var converting = false
 
 var appStyle = lipgloss.NewStyle().Margin(1, 2, 0, 2)
 var helpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#626262"))
 var headingStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("63"))
 
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(
-		m.filepicker.Init(),
-		m.form.Init(),
-	)
+	if m.selectedFileName == "" {
+		return tea.Sequence(
+			m.filepicker.Init(),
+			m.form.Init(),
+		)
+	}
+	return m.form.Init()
 }
 
-var converting = false
+func startX265Conversion(m Model) tea.Cmd {
+	go Convert(m.selectedFilePath, fmt.Sprintf("./optimized/%s.mp4", m.selectedFileName), "libx265")
+	return nil
+}
 
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// if the form is completed, start the conversion
-	if m.form.State == huh.StateCompleted && !converting {
-		converting = true
-		go Convert(m.selectedFilePath, fmt.Sprintf("./optimized/%s.mp4", m.selectedFileName), "libx265")
-		return m, m.x265progress.SetPercent(0.001)
+func startAV1Conversion(m Model) tea.Cmd {
+	go Convert(m.selectedFilePath, fmt.Sprintf("./optimized/%s.webm", m.selectedFileName), "libsvtav1")
+	return nil
+}
+
+func startConversion(m Model) tea.Cmd {
+	if !skipX265 {
+		return startX265Conversion(m)
+	}
+	// skipping x265
+	if !skipAV1 {
+		return startAV1Conversion(m)
 	}
 
+	return nil
+}
+
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// quit if the user presses q or ctrl+c
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	if msg, ok := msg.(tea.KeyMsg); ok {
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Sequence(
@@ -78,25 +92,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	// Update the form
-	if m.selectedFilePath != "" && m.form.State != huh.StateCompleted {
-		form, cmd := m.form.Update(msg)
-		if f, ok := form.(*huh.Form); ok {
-			m.form = f
-		}
-		return m, tea.Sequence(
-			cmd,
-			func() tea.Msg {
-				if m.form.State == huh.StateCompleted {
-					m.Update(nil)
-				}
-				return nil
-			})
-	}
-
-	var cmd tea.Cmd
-
 	if m.selectedFilePath == "" {
+		var cmd tea.Cmd
 		m.filepicker, cmd = m.filepicker.Update(msg)
 		// Did the user select a file?
 		if didSelect, path := m.filepicker.DidSelectFile(msg); didSelect {
@@ -104,24 +101,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.selectedFilePath = path
 			// get the file name without extension
 			m.selectedFileName = getFileNameFromPath(m.selectedFilePath)
-			// return m, cmd
 		}
-
 		return m, cmd
 	}
 
 	switch msg := msg.(type) {
+	// Update the progress bar percentages
 	case progressMsg:
-		// quit if conversions are done
-		if m.x265progress.Percent() >= 1.0 && m.av1progress.Percent() >= 1.0 {
-			return m, tea.Quit
-		}
-		// start av1 conversion if x265 is done
-		if m.x265progress.Percent() >= 1.00 && m.av1progress.Percent() == 0.0 {
-			go Convert(m.selectedFilePath, fmt.Sprintf("./optimized/%s.webm", m.selectedFileName), "libsvtav1")
-			return m, m.av1progress.SetPercent(0.001)
-		}
-		// Update the progress bar
 		if msg.conversion == "libx265" {
 			return m, m.x265progress.SetPercent(float64(msg.percent))
 		}
@@ -142,16 +128,52 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 
+	// if a conversion is done, quit or start the next
+	case conversionDone:
+		if msg == "libx265" {
+			m.x265progress.SetPercent(1.0)
+			if !skipAV1 {
+				return m, startAV1Conversion(m)
+			}
+			return m, tea.Quit
+		}
+		if msg == "libsvtav1" {
+			m.av1progress.SetPercent(1.0)
+			return m, tea.Quit
+		}
+
 	case tea.WindowSizeMsg:
 		// Calculate the maximum width of the progress bars
 		bars := []progress.Model{m.x265progress, m.av1progress}
-		maxWidth := msg.Width - padding*2 - 4
+		maxWidth := msg.Width - 2*2 - 4
 		for _, bar := range bars {
 			if bar.Width > maxWidth {
 				maxWidth = bar.Width
 			}
 		}
 		return m, nil
+	}
+
+	// if the form is completed, start the conversion
+	if m.form.State == huh.StateCompleted && !converting {
+		converting = true
+		return m, startConversion(m)
+	}
+
+	// Update the form
+	if m.selectedFilePath != "" && m.form.State != huh.StateCompleted {
+		form, cmd := m.form.Update(msg)
+		if f, ok := form.(*huh.Form); ok {
+			m.form = f
+		}
+		return m, tea.Sequence(
+			cmd,
+			func() tea.Msg {
+				if m.form.State == huh.StateCompleted {
+					m.Update(nil)
+				}
+				return nil
+			})
 	}
 
 	return m, nil
@@ -171,18 +193,12 @@ func (m Model) View() string {
 		return appStyle.Render(m.form.View())
 	}
 
-	result := ""
-	if m.x265progress.Percent() > 0.0 {
-		result += "Converting to x265"
-		result += "\n" + m.x265progress.View()
-		result += "\n\n" + "Converting to AV1"
-		result += "\n" + m.av1progress.View()
-	}
-	if result != "" {
-		result += "\n\n" + helpStyle.Render("Press q to quit")
-		return appStyle.Render(result)
-	}
-	return ""
+	result := "Converting to x265"
+	result += "\n" + m.x265progress.View()
+	result += "\n\n" + "Converting to AV1"
+	result += "\n" + m.av1progress.View()
+	result += "\n\n" + helpStyle.Render("Press q to quit")
+	return appStyle.Render(result)
 }
 
 func main() {
@@ -193,10 +209,12 @@ func main() {
 	// handle flags
 	versionFlag := flag.BoolP("version", "v", false, "Print version and exit")
 	updateFlag := flag.BoolP("update", "u", false, "Update to the latest version")
+	flag.BoolVar(&skipX265, "skip-x265", false, "Skip x265 conversion")
+	flag.BoolVar(&skipAV1, "skip-av1", false, "Skip AV1 conversion")
 
 	// Override default Usage function to suppress the "pflag: help requested" message
 	flag.Usage = func() {
-		fmt.Fprint(os.Stderr, "Usage: webvids [FILE]\n\nOptions:\n")
+		fmt.Fprint(os.Stderr, "Usage: webvids [OPTIONS] [FILE]\n\nOptions:\n")
 		flag.PrintDefaults()
 		os.Exit(0)
 	}
@@ -211,6 +229,14 @@ func main() {
 		Update()
 		os.Exit(0)
 	}
+	if skipX265 && skipAV1 {
+		log.Error("Cannot skip both x265 and AV1")
+		os.Exit(1)
+	}
+
+	// verify that ffmpeg is installed
+	_, err := exec.LookPath("ffmpeg")
+	CheckError(err)
 
 	// if user passed in file path
 	tail := flag.Args()
@@ -248,6 +274,7 @@ func main() {
 		filepicker:       fp,
 		selectedFilePath: selectedFilePath,
 		selectedFileName: selectedFileName,
+		done:             []string{},
 		form: huh.NewForm(
 			huh.NewGroup(
 				huh.NewInput().

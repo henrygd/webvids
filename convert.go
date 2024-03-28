@@ -26,6 +26,8 @@ type progressMsg struct {
 	conversion string
 }
 
+type conversionDone string
+
 type probeData struct {
 	Streams []struct {
 		Width  int `json:"width"`
@@ -135,6 +137,11 @@ func convertWithProgress(inFileName string, outFileName string, ffmpegArgs ffmpe
 	if err != nil {
 		panic(err)
 	}
+
+	// wait a sec to finish progress bar animation
+	time.Sleep(time.Millisecond * 500)
+
+	Program.Send(conversionDone(CurentConversion))
 }
 
 func TempSock(totalDuration float64) string {
@@ -168,17 +175,14 @@ func TempSock(totalDuration float64) string {
 			if strings.Contains(data, "progress=end") {
 				cp = 1.00
 			}
-			if cp > 0.00 && cp < 1.01 {
+			if cp > 0.00 && cp <= 1.00 {
 				Program.Send(progressMsg(progressMsg{
 					percent:    cp,
 					conversion: CurentConversion,
 				}))
 				if cp == 1.00 {
-					time.Sleep(time.Second / 2)
-					Program.Send(progressMsg(progressMsg{
-						percent:    cp,
-						conversion: CurentConversion,
-					}))
+					l.Close()
+					break
 				}
 			}
 		}
