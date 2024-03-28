@@ -18,7 +18,7 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-const VERSION = "0.1.1"
+const VERSION = "0.1.2"
 
 type Model struct {
 	x265progress     progress.Model
