@@ -6,14 +6,14 @@ Terminal app to create optimized videos for the web.
 
 ## Installation
 
-Please install / update `ffmpeg` first. This program requires it.
+Please install / update `ffmpeg` first as this program requires it.
 
 Run the command below or download the correct binary for your system on the [releases page](https://github.com/henrygd/webvids/releases).
 
 ### One liner
 
 ```bash
-sudo sh -c 'curl -sL "https://github.com/henrygd/webvids/releases/latest/download/webvids_$(uname -s)_$(uname -m | sed 's/x86_64/amd64/' | sed 's/i386/386/' | sed 's/aarch64/arm64/').tar.gz" | tar -xz -O webvids | tee /usr/bin/webvids >/dev/null && chmod +x /usr/bin/webvids'
+sudo sh -c 'curl -sL "https://github.com/henrygd/webvids/releases/latest/download/webvids_$(uname -s)_$(uname -m | sed 's/x86_64/amd64/' | sed 's/i386/386/' | sed 's/aarch64/arm64/').tar.gz" | tar -xz -O webvids | tee /usr/local/bin/webvids >/dev/null && chmod +x /usr/local/bin/webvids && ls /usr/local/bin/webvids'
 ```
 
 ### Manual
@@ -28,8 +28,8 @@ tar -xzf webvids.tar.gz webvids
 # Make the binary executable
 chmod +x webvids
 
-# Move the binary to /usr/bin
-sudo mv webvids /usr/bin/
+# Move the binary to /usr/local/bin
+sudo mv webvids /usr/local/bin/
 ```
 
 ## Usage
@@ -60,6 +60,12 @@ Use both videos in HTML with `source` tags:
 | `-u, --update`  | Update to the latest version |
 | `--skip-x265`   | Skip x265 conversion         |
 | `--skip-av1`    | Skip AV1 conversion          |
+
+## Uninstall
+
+```bash
+sudo rm /usr/local/bin/webvids
+```
 
 ## Todo
 
