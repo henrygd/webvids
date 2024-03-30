@@ -13,7 +13,7 @@ Run the command below or download the correct binary for your system on the [rel
 ### One liner
 
 ```bash
-sudo sh -c 'curl -sL "https://github.com/henrygd/webvids/releases/latest/download/webvids_$(uname -s)_$(uname -m | sed 's/x86_64/amd64/' | sed 's/i386/386/' | sed 's/aarch64/arm64/').tar.gz" | tar -xz -O webvids | tee /usr/local/bin/webvids >/dev/null && chmod +x /usr/local/bin/webvids && ls /usr/local/bin/webvids'
+curl -sL "https://github.com/henrygd/webvids/releases/latest/download/webvids_$(uname -s)_$(uname -m | sed 's/x86_64/amd64/' | sed 's/i386/386/' | sed 's/aarch64/arm64/').tar.gz" | tar -xz -O webvids | sudo tee /usr/local/bin/webvids >/dev/null && sudo chmod +x /usr/local/bin/webvids && ls /usr/local/bin/webvids
 ```
 
 ### Manual
