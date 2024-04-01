@@ -279,14 +279,14 @@ func main() {
 			huh.NewGroup(
 				huh.NewInput().
 					Title("Constant rate factor").
-					Description("Lowering value will increase quality and file size.").
+					Description("Lower value means higher quality and file size").
 					Placeholder(Crf).
 					Value(&Crf).
 					Validate(func(str string) error {
 						// Convert string to int
-						msg := "Must be a number between 10 and 50"
+						msg := "Must be a number between 18 and 45"
 						num, err := strconv.Atoi(str)
-						if err != nil || num < 10 || num > 50 {
+						if err != nil || num < 18 || num > 45 {
 							return errors.New(msg)
 						}
 						return nil
