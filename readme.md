@@ -37,7 +37,7 @@ sudo mv webvids /usr/local/bin/
 Run the `webvids` command. You may specify an input file or use the built-in file picker.
 
 ```bash
-webvids ./input.mp4
+webvids input.mp4
 ```
 
 The video(s) will be written to a folder named `optimized` in the current directory.
@@ -53,13 +53,14 @@ Use both videos in HTML with `source` tags:
 
 ## Options
 
-| Flag            | Description                  |
-| --------------- | ---------------------------- |
-| `-h, --help`    | Show help                    |
-| `-v, --version` | Print version and exit       |
-| `-u, --update`  | Update to the latest version |
-| `--skip-x265`   | Skip x265 conversion         |
-| `--skip-av1`    | Skip AV1 conversion          |
+| Flag            | Description                               |
+| --------------- | ----------------------------------------- |
+| `-h, --help`    | Show help                                 |
+| `-v, --version` | Print version and exit                    |
+| `-u, --update`  | Update to the latest version              |
+| `-s, --speed`   | Priority of conversion speed over quality |
+| `--skip-x265`   | Skip x265 conversion                      |
+| `--skip-av1`    | Skip AV1 conversion                       |
 
 ## Uninstall
 
@@ -70,5 +71,5 @@ sudo rm /usr/local/bin/webvids
 ## Todo
 
 - check that libsvtav1 codec is available
-- allow selection of preset for faster / slower encoding
 - allow multiple files to be passed in
+- add flag for optimized settings for animated videos

@@ -35,6 +35,7 @@ var Cmd *exec.Cmd
 var Crf = "28"
 var StripAudio = false
 var Preview = false
+var Speed = 2
 var skipX265 bool
 var skipAV1 bool
 var converting = false
@@ -206,9 +207,18 @@ func main() {
 	selectedFilePath := ""
 	selectedFileName := ""
 
+	// make sure we have the right default speed preset
+	for i, preset := range SpeedPresets {
+		if preset.libx265 == "medium" {
+			Speed = i
+			break
+		}
+	}
+
 	// handle flags
 	versionFlag := flag.BoolP("version", "v", false, "Print version and exit")
 	updateFlag := flag.BoolP("update", "u", false, "Update to the latest version")
+	flag.IntVarP(&Speed, "speed", "s", Speed, fmt.Sprintf("Priority of conversion speed over quality (0-%d)", len(SpeedPresets)-1))
 	flag.BoolVar(&skipX265, "skip-x265", false, "Skip x265 conversion")
 	flag.BoolVar(&skipAV1, "skip-av1", false, "Skip AV1 conversion")
 
@@ -231,6 +241,11 @@ func main() {
 	}
 	if skipX265 && skipAV1 {
 		log.Error("Cannot skip both x265 and AV1")
+		os.Exit(1)
+	}
+	// check that speed is within range
+	if Speed < 0 || Speed >= len(SpeedPresets) {
+		log.Errorf("Speed preset must be between 0 and %d", len(SpeedPresets)-1)
 		os.Exit(1)
 	}
 

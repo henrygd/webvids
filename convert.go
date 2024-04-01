@@ -16,11 +16,6 @@ import (
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
-var CurentConversion = ""
-var inputProbeData = probeData{}
-var inputHeight = 0
-var inputWidth = 0
-
 type progressMsg struct {
 	percent    float64
 	conversion string
@@ -36,6 +31,41 @@ type probeData struct {
 	Format struct {
 		Duration string `json:"duration"`
 	} `json:"format"`
+}
+
+var CurentConversion = ""
+var inputProbeData = probeData{}
+var inputHeight = 0
+var inputWidth = 0
+
+var SpeedPresets = []struct {
+	libx265   string
+	libsvtav1 string
+}{
+	{
+		libx265:   "slow",
+		libsvtav1: "4",
+	},
+	{
+		libx265:   "slow",
+		libsvtav1: "5",
+	},
+	{
+		libx265:   "medium",
+		libsvtav1: "7",
+	},
+	{
+		libx265:   "fast",
+		libsvtav1: "9",
+	},
+	{
+		libx265:   "veryfast",
+		libsvtav1: "10",
+	},
+	{
+		libx265:   "superfast",
+		libsvtav1: "12",
+	},
 }
 
 func Convert(infile string, outfile string, codec string) {
@@ -92,16 +122,19 @@ func Convert(infile string, outfile string, codec string) {
 	// x265 specific options
 	if codec == "libx265" {
 		ffmpegArgs["crf"] = Crf
+		ffmpegArgs["preset"] = SpeedPresets[Speed].libx265
 		ffmpegArgs["movflags"] = "faststart"
 		ffmpegArgs["tag:v"] = "hvc1"
-		// ffmpegArgs["preset"] = "slow"
 		// ffmpegArgs["profile:v"] = "main"
 		// ffmpegArgs["pix_fmt"] = "yuv420p"
 
 	}
 	// av1 specific options
 	if codec == "libsvtav1" {
-		ffmpegArgs["preset"] = "7"
+		ffmpegArgs["preset"] = SpeedPresets[Speed].libsvtav1
+		ffmpegArgs["svtav1-params"] = "tune=0:enable-qm=1:qm-min=0:enable-tf=0"
+		// ffmpegArgs["pix_fmt"] = "yuv420p10le"
+
 		// add 7 to base crf (28 -> 35)
 		crf, err := strconv.Atoi(Crf)
 		if err != nil {
