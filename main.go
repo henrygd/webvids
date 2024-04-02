@@ -218,7 +218,10 @@ func main() {
 	// handle flags
 	versionFlag := flag.BoolP("version", "v", false, "Print version and exit")
 	updateFlag := flag.BoolP("update", "u", false, "Update to the latest version")
+	flag.StringVar(&Crf, "crf", Crf, "Constant rate factor")
 	flag.IntVarP(&Speed, "speed", "s", Speed, fmt.Sprintf("Priority of conversion speed over quality (0-%d)", len(SpeedPresets)-1))
+	flag.BoolVar(&StripAudio, "strip-audio", StripAudio, "Strip audio from the video")
+	flag.BoolVarP(&Preview, "preview", "p", Preview, "Converts only the first 3 seconds")
 	flag.BoolVar(&skipX265, "skip-x265", false, "Skip x265 conversion")
 	flag.BoolVar(&skipAV1, "skip-av1", false, "Skip AV1 conversion")
 
