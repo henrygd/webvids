@@ -27,7 +27,6 @@ type Model struct {
 	filepicker       filepicker.Model
 	selectedFilePath string
 	selectedFileName string
-	done             []string
 }
 
 var Program *tea.Program
@@ -292,7 +291,6 @@ func main() {
 		filepicker:       fp,
 		selectedFilePath: selectedFilePath,
 		selectedFileName: selectedFileName,
-		done:             []string{},
 		form: huh.NewForm(
 			huh.NewGroup(
 				huh.NewInput().
@@ -325,6 +323,12 @@ func main() {
 					Value(&Preview),
 			),
 		),
+	}
+
+	// if required flags are set, skip form by setting state to completed
+	skipForm := flag.CommandLine.Changed("crf") && flag.CommandLine.Changed("strip-audio") && flag.CommandLine.Changed("preview")
+	if skipForm {
+		m.form.State = huh.StateCompleted
 	}
 
 	Program = tea.NewProgram(m)
