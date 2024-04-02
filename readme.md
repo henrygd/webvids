@@ -6,7 +6,7 @@ Terminal app to create optimized videos for the web.
 
 ## Installation
 
-Please install / update `ffmpeg` first as this program requires it.
+Please install / update `ffmpeg` first as the program requires it.
 
 Run the command below or download the correct binary for your system on the [releases page](https://github.com/henrygd/webvids/releases).
 
@@ -51,16 +51,27 @@ Use both videos in HTML with `source` tags:
 </video>
 ```
 
-## Options
+## Command line options
 
-| Flag            | Description                               |
-| --------------- | ----------------------------------------- |
-| `-h, --help`    | Show help                                 |
-| `-v, --version` | Print version and exit                    |
-| `-u, --update`  | Update to the latest version              |
-| `-s, --speed`   | Priority of conversion speed over quality |
-| `--skip-x265`   | Skip x265 conversion                      |
-| `--skip-av1`    | Skip AV1 conversion                       |
+webvids can run without interaction by passing in a file and form options:
+
+```bash
+webvids --crf 26 --preview=false --strip-audio input.mp4
+```
+
+The following options are available:
+
+| Flag              | Description                                     |
+| ----------------- | ----------------------------------------------- |
+| `--crf`           | Constant rate factor                            |
+| `-h`, `--help`    | Show help                                       |
+| `--preview`       | Converts only the first 3 seconds               |
+| `--skip-av1`      | Skip AV1 conversion                             |
+| `--skip-x265`     | Skip x265 conversion                            |
+| `-s`, `--speed`   | Priority of conversion speed over quality (0-5) |
+| `--strip-audio`   | Remove audio track from output                  |
+| `-u`, `--update`  | Update to the latest version                    |
+| `-v`, `--version` | Print version and exit                          |
 
 ## Uninstall
 

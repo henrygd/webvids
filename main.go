@@ -101,6 +101,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.selectedFilePath = path
 			// get the file name without extension
 			m.selectedFileName = getFileNameFromPath(m.selectedFilePath)
+			// update the model
+			return m.Update(nil)
 		}
 		return m, cmd
 	}
@@ -166,14 +168,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if f, ok := form.(*huh.Form); ok {
 			m.form = f
 		}
-		return m, tea.Sequence(
-			cmd,
-			func() tea.Msg {
-				if m.form.State == huh.StateCompleted {
-					m.Update(nil)
-				}
-				return nil
-			})
+		if m.form.State == huh.StateCompleted {
+			return m.Update(nil)
+		}
+		return m, cmd
 	}
 
 	return m, nil
@@ -193,9 +191,9 @@ func (m Model) View() string {
 		return appStyle.Render(m.form.View())
 	}
 
-	result := "Converting to x265"
+	result := "Converting x265 MP4"
 	result += "\n" + m.x265progress.View()
-	result += "\n\n" + "Converting to AV1"
+	result += "\n\n" + "Converting AV1 WebM"
 	result += "\n" + m.av1progress.View()
 	result += "\n\n" + helpStyle.Render("Press q to quit")
 	return appStyle.Render(result)
@@ -220,7 +218,7 @@ func main() {
 	updateFlag := flag.BoolP("update", "u", false, "Update to the latest version")
 	flag.StringVar(&Crf, "crf", Crf, "Constant rate factor")
 	flag.IntVarP(&Speed, "speed", "s", Speed, fmt.Sprintf("Priority of conversion speed over quality (0-%d)", len(SpeedPresets)-1))
-	flag.BoolVar(&StripAudio, "strip-audio", StripAudio, "Strip audio from the video")
+	flag.BoolVar(&StripAudio, "strip-audio", StripAudio, "Remove audio track from output")
 	flag.BoolVar(&Preview, "preview", Preview, "Converts only the first 3 seconds")
 	flag.BoolVar(&skipX265, "skip-x265", false, "Skip x265 conversion")
 	flag.BoolVar(&skipAV1, "skip-av1", false, "Skip AV1 conversion")
