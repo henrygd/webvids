@@ -205,6 +205,7 @@ func main() {
 	allowedTypes := []string{".mp4", ".mkv", ".mov", ".avi", ".wmv", ".webm"}
 	selectedFilePath := ""
 	selectedFileName := ""
+	crfRange := [2]int{18, 45}
 
 	// make sure we have the right default speed preset
 	for i, preset := range SpeedPresets {
@@ -220,7 +221,7 @@ func main() {
 	flag.StringVar(&Crf, "crf", Crf, "Constant rate factor")
 	flag.IntVarP(&Speed, "speed", "s", Speed, fmt.Sprintf("Priority of conversion speed over quality (0-%d)", len(SpeedPresets)-1))
 	flag.BoolVar(&StripAudio, "strip-audio", StripAudio, "Strip audio from the video")
-	flag.BoolVarP(&Preview, "preview", "p", Preview, "Converts only the first 3 seconds")
+	flag.BoolVar(&Preview, "preview", Preview, "Converts only the first 3 seconds")
 	flag.BoolVar(&skipX265, "skip-x265", false, "Skip x265 conversion")
 	flag.BoolVar(&skipAV1, "skip-av1", false, "Skip AV1 conversion")
 
@@ -250,9 +251,18 @@ func main() {
 		log.Errorf("Speed preset must be between 0 and %d", len(SpeedPresets)-1)
 		os.Exit(1)
 	}
+	// check that crf is within range
+	CrfInt, err := strconv.Atoi(Crf)
+	if err != nil {
+		log.Fatalf("Failed to convert crf string to integer: %v", err)
+	}
+	if CrfInt < crfRange[0] || CrfInt > crfRange[1] {
+		log.Errorf("CRF must be between %d and %d", crfRange[0], crfRange[1])
+		os.Exit(1)
+	}
 
 	// verify that ffmpeg is installed
-	_, err := exec.LookPath("ffmpeg")
+	_, err = exec.LookPath("ffmpeg")
 	CheckError(err)
 
 	// if user passed in file path
@@ -300,9 +310,9 @@ func main() {
 					Value(&Crf).
 					Validate(func(str string) error {
 						// Convert string to int
-						msg := "Must be a number between 18 and 45"
+						msg := fmt.Sprintf("Must be a number between %d and %d", crfRange[0], crfRange[1])
 						num, err := strconv.Atoi(str)
-						if err != nil || num < 18 || num > 45 {
+						if err != nil || num < crfRange[0] || num > crfRange[1] {
 							return errors.New(msg)
 						}
 						return nil
