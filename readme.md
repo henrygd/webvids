@@ -46,8 +46,8 @@ Use both videos in HTML with `source` tags:
 
 ```html
 <video controls>
-	<source type="video/mp4" src="output.mp4" />
 	<source type="video/webm" src="output.webm" />
+	<source type="video/mp4" src="output.mp4" />
 </video>
 ```
 
