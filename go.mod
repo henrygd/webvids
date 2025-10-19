@@ -1,4 +1,4 @@
-module webvids
+module github.com/henrygd/webvids
 
 go 1.22.0
 
